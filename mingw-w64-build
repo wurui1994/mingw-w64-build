@@ -1,20 +1,5 @@
 #!/bin/bash
-#
-# Copyright (C) 2017 Kyle Schwarz
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+
 
 v_script="4.0.1"
 v_binutils="2.29.1"
@@ -72,7 +57,7 @@ clean_build()
 {
   local build_dir="$1"
 
-  rm -fr "$build_dir"
+  # rm -fr "$build_dir"
   mkdir -p "$build_dir"
   cd "$build_dir" || error_exit  
 }
@@ -81,23 +66,24 @@ download_sources()
 {
   cd "$src" || error_exit
 
-  echo "downloading mingw-w64-git" >&3
-  git clone --depth 1 git://git.code.sf.net/p/mingw-w64/mingw-w64 "mingw-w64-git" || error_exit
+  # echo "downloading mingw-w64-v5.0.2" >&3
+  # git clone --depth 1 git://git.code.sf.net/p/mingw-w64/mingw-w64 "mingw-w64-v5.0.2" || error_exit
 
   local urls=(
-    "http://ftp.gnu.org/gnu/binutils/binutils-$v_binutils.tar.bz2"
-    "http://ftp.gnu.org/gnu/gcc/gcc-$v_gcc/gcc-$v_gcc.tar.xz"
-    "http://ftp.gnu.org/gnu/gmp/gmp-$v_gmp.tar.xz"
-    "http://ftp.gnu.org/gnu/mpfr/mpfr-$v_mpfr.tar.xz"
-    "http://ftp.gnu.org/gnu/mpc/mpc-$v_mpc.tar.gz"
+    "https://mirrors.tuna.tsinghua.edu.cn/gnu/binutils/binutils-$v_binutils.tar.bz2"
+    "https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-$v_gcc/gcc-$v_gcc.tar.xz"
+    "https://mirrors.tuna.tsinghua.edu.cn/gnu/gmp/gmp-$v_gmp.tar.xz"
+    "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpfr/mpfr-$v_mpfr.tar.xz"
+    "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpc/mpc-$v_mpc.tar.gz"
     "http://isl.gforge.inria.fr/isl-$v_isl.tar.xz"
+    "https://nchc.dl.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v5.0.2.tar.bz2"
   )
 
   for url in "${urls[@]}"; do
     local archive="${url##*/}"
     local c
     echo "downloading $archive" >&3
-    wget -nv "$url" || error_exit
+    wget -c "$url" || error_exit
     echo "extracting $archive" >&3
     case "${archive##*.}" in
       gz) c=z ;;
@@ -114,28 +100,15 @@ download_sources()
   ln -s "../mpc-$v_mpc" "mpc"
   ln -s "../isl-$v_isl" "isl"
 
-  patch -p 1 <<PATCH
-diff -uprN a/libstdc++-v3/config/os/mingw32-w64/os_defines.h b/libstdc++-v3/config/os/mingw32-w64/os_defines.h
---- a/libstdc++-v3/config/os/mingw32-w64/os_defines.h   2017-01-01 04:07:43.000000000 -0800
-+++ b/libstdc++-v3/config/os/mingw32-w64/os_defines.h   2017-05-25 18:47:52.161016148 -0700
-@@ -76,6 +76,7 @@
-
- #ifdef __x86_64__
- #define _GLIBCXX_LLP64 1
-+#define _GLIBCXX_USE_WEAK_REF 0
- #endif
-
- // Enable use of GetModuleHandleEx (requires Windows XP/2003) in
-PATCH
 }
 
-build_toolchain()
+cross_toolchain()
 {
   local host="$1-w64-mingw32"
-  local prefix="$wd/$host"
+  local prefix="$wd/cross-gcc"
   export PATH="$prefix/bin:$PATH"
 
-  rm -fr "$prefix"
+  # rm -fr "$prefix"
 
   clean_build "$bld/binutils"
   echo "configuring binutils" >&3
@@ -149,7 +122,7 @@ build_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-headers" >&3
-  "../../src/mingw-w64-git/mingw-w64-headers/configure" --build="$build" \
+  "../../src/mingw-w64-v5.0.2/mingw-w64-headers/configure" --build="$build" \
     --host="$host" --prefix="$prefix/$host" --enable-secure-api || error_exit
   echo "installing mingw-w64-headers" >&3
   make install || error_exit
@@ -168,7 +141,67 @@ build_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-crt" >&3
-  "../../src/mingw-w64-git/mingw-w64-crt/configure" --build="$build" --host="$host" \
+  "../../src/mingw-w64-v5.0.2/mingw-w64-crt/configure" --build="$build" --host="$host" \
+    --prefix="$prefix/$host" --with-sysroot="$prefix/$host"
+  echo "building mingw-w64-crt" >&3
+  make -j $cpus || error_exit
+  echo "installing mingw-w64-crt" >&3
+  make install || error_exit
+
+  cd "$bld/gcc" || error_exit
+  echo "building gcc" >&3
+  make -j $cpus || error_exit
+  echo "installing gcc" >&3
+  make install || error_exit
+
+  return 0
+}
+
+native_toolchain()
+{
+  local host="$1-w64-mingw32"
+  local prefix="$wd/native-gcc"
+  export PATH="$wd/cross-gcc/bin:$PATH"
+  
+  local CC=i686-w64-mingw32-gcc
+  local CXX=i686-w64-mingw32-g++
+  alias gcc=i686-w64-mingw32-gcc
+  alias g++=i686-w64-mingw32-g++
+
+  # rm -fr "$prefix"
+
+  clean_build "$bld/binutils"
+  echo "configuring binutils" >&3
+  "../../src/binutils-$v_binutils/configure" --prefix="$prefix" --disable-shared \
+    --enable-static --with-sysroot="$prefix" --host="$host" --target="$host" \
+    --disable-multilib --disable-nls || error_exit
+  echo "building binutils" >&3
+  make -j $cpus || error_exit
+  echo "installing binutils" >&3
+  make install || error_exit
+
+  clean_build "$bld/mingw-w64"
+  echo "configuring mingw-w64-headers" >&3
+  "../../src/mingw-w64-v5.0.2/mingw-w64-headers/configure" --build="$build" \
+    --host="$host" --prefix="$prefix/$host" --enable-secure-api || error_exit
+  echo "installing mingw-w64-headers" >&3
+  make install || error_exit
+  cd "$prefix" || error_exit
+  ln -s "./$host" "./mingw" || error_exit
+
+  clean_build "$bld/gcc"
+  echo "configuring gcc" >&3
+  "../../src/gcc-$v_gcc/configure" --host="$host" --target="$host" --disable-shared \
+    --enable-static --disable-multilib --prefix="$prefix" --with-sysroot="$prefix" \
+    --enable-languages=c,c++ --disable-nls || error_exit
+  echo "running 'make-gcc' for gcc" >&3
+  make -j $cpus all-gcc || error_exit
+  echo "running 'install-gcc' for gcc" >&3
+  make install-gcc || error_exit
+
+  clean_build "$bld/mingw-w64"
+  echo "configuring mingw-w64-crt" >&3
+  "../../src/mingw-w64-v5.0.2/mingw-w64-crt/configure" --build="$build" --host="$host" \
     --prefix="$prefix/$host" --with-sysroot="$prefix/$host"
   echo "building mingw-w64-crt" >&3
   make -j $cpus || error_exit
@@ -246,20 +279,34 @@ if [[ -n "$missing_progs" ]]; then
   exit 1
 fi
 
-cpus=$(grep -c processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu | tr -d "\n" 2>/dev/null)
-build=$(wget -qO - "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD" | sh)
+cpus=$(nproc --all)
+build=x86_64-pc-linux-gnu
 wd="$PWD"
 src="$wd/src"
-bld="$wd/bld"
-log="$wd/bld/build.log"
+bld="$wd/bld-cross"
+log="$bld/build.log"
 
-rm -fr "$log" "$src" "$bld"
-mkdir "$wd/bld" "$wd/src"
-download_sources 3>&1 1>>"$log" 2>&1
+# rm -fr "$log" "$src" "$bld"
+mkdir "$bld" "$src"
+# download_sources 3>&1 1>>"$log" 2>&1
 
 for arch in $@; do
-  build_toolchain "$arch" 3>&1 1>>"$log" 2>&1
+  cross_toolchain "$arch" 3>&1 1>>"$log" 2>&1
 done
-rm -fr "$wd/bld" "$wd/src"
+# rm -fr "$wd/bld" "$wd/src"
+
+
+cpus=$(nproc --all)
+build=i686-w64-mingw32
+wd="$PWD"
+src="$wd/src"
+bld="$wd/bld-native"
+log="$bld/build.log"
+
+mkdir "$bld" "$src"
+
+for arch in $@; do
+  native_toolchain "$arch" 3>&1 1>>"$log" 2>&1
+done
 
 exit 0
