@@ -191,7 +191,7 @@ native_toolchain()
     --enable-static --disable-multilib --prefix="$prefix" --with-sysroot="$prefix" \
     --enable-languages=c,c++ --disable-nls || error_exit
   echo "running 'make-gcc' for gcc" >&3
-  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
+  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "running 'install-gcc' for gcc" >&3
   make install-gcc || error_exit
 
@@ -305,5 +305,11 @@ mkdir "$bld" "$src"
 for arch in $@; do
   native_toolchain "$arch" 3>&1 1>>"$log" 2>&1
 done
+
+cd $wd
+echo "Packge cross-gcc"
+7z a cross-gcc.7z cross-gcc/ || error_exit
+echo "Packge native-gcc"
+7z a native-gcc.7z native-gcc/ || error_exit
 
 exit 0
