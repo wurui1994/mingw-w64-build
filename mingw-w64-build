@@ -108,15 +108,13 @@ cross_toolchain()
   local prefix="$wd/cross-gcc"
   export PATH="$prefix/bin:$PATH"
 
-  # rm -fr "$prefix"
-
   clean_build "$bld/binutils"
   echo "configuring binutils" >&3
   "../../src/binutils-$v_binutils/configure" --prefix="$prefix" --disable-shared \
     --enable-static --with-sysroot="$prefix" --target="$host" \
     --disable-multilib --disable-nls || error_exit
   echo "building binutils" >&3
-  make -j $cpus || error_exit
+  make -j $cpus "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "installing binutils" >&3
   make install || error_exit
 
@@ -135,7 +133,7 @@ cross_toolchain()
     --enable-static --disable-multilib --prefix="$prefix" \
     --enable-languages=c,c++ --disable-nls || error_exit
   echo "running 'make-gcc' for gcc" >&3
-  make -j $cpus all-gcc || error_exit
+  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" ||make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s"|| error_exit
   echo "running 'install-gcc' for gcc" >&3
   make install-gcc || error_exit
 
@@ -150,7 +148,7 @@ cross_toolchain()
 
   cd "$bld/gcc" || error_exit
   echo "building gcc" >&3
-  make -j $cpus || error_exit
+  make -j $cpus "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "installing gcc" >&3
   make install || error_exit
 
@@ -168,15 +166,13 @@ native_toolchain()
   alias gcc=i686-w64-mingw32-gcc
   alias g++=i686-w64-mingw32-g++
 
-  # rm -fr "$prefix"
-
   clean_build "$bld/binutils"
   echo "configuring binutils" >&3
   "../../src/binutils-$v_binutils/configure" --prefix="$prefix" --disable-shared \
     --enable-static --with-sysroot="$prefix" --host="$host" --target="$host" \
     --disable-multilib --disable-nls || error_exit
   echo "building binutils" >&3
-  make -j $cpus || error_exit
+  make -j $cpus "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "installing binutils" >&3
   make install || error_exit
 
@@ -195,7 +191,7 @@ native_toolchain()
     --enable-static --disable-multilib --prefix="$prefix" --with-sysroot="$prefix" \
     --enable-languages=c,c++ --disable-nls || error_exit
   echo "running 'make-gcc' for gcc" >&3
-  make -j $cpus all-gcc || error_exit
+  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "running 'install-gcc' for gcc" >&3
   make install-gcc || error_exit
 
@@ -204,7 +200,7 @@ native_toolchain()
   "../../src/mingw-w64-v5.0.2/mingw-w64-crt/configure" --build="$build" --host="$host" \
     --prefix="$prefix/$host" --with-sysroot="$prefix/$host"
   echo "building mingw-w64-crt" >&3
-  make -j $cpus || error_exit
+  make -j $cpus "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
   echo "installing mingw-w64-crt" >&3
   make install || error_exit
 
@@ -295,6 +291,7 @@ for arch in $@; do
 done
 # rm -fr "$wd/bld" "$wd/src"
 
+cd $wd
 
 cpus=$(nproc --all)
 build=i686-w64-mingw32
