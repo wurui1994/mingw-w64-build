@@ -17,12 +17,13 @@
 #
 
 v_script="4.0.1"
-v_binutils="2.29.1"
-v_gcc="7.2.0"
+v_binutils="2.30"
+v_gcc="8.1.0"
 v_gmp="6.1.2"
-v_mpfr="3.1.6"
-v_mpc="1.0.3"
-v_isl="0.18"
+v_mpfr="4.0.1"
+v_mpc="1.1.0"
+v_isl="0.19"
+v_mingw="5.0.3"
 
 show_help()
 {
@@ -81,8 +82,8 @@ download_sources()
 {
   cd "$src" || error_exit
 
-  # echo "downloading mingw-w64-v5.0.2" >&3
-  # git clone --depth 1 git://git.code.sf.net/p/mingw-w64/mingw-w64 "mingw-w64-v5.0.2" || error_exit
+  # echo "downloading mingw-w64-v$v_mingw" >&3
+  git clone --depth 1 git://git.code.sf.net/p/mingw-w64/mingw-w64 "mingw-w64-v$v_mingw" || error_exit
 
   local urls=(
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/binutils/binutils-$v_binutils.tar.bz2"
@@ -91,7 +92,7 @@ download_sources()
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpfr/mpfr-$v_mpfr.tar.xz"
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpc/mpc-$v_mpc.tar.gz"
     "http://isl.gforge.inria.fr/isl-$v_isl.tar.xz"
-    "https://nchc.dl.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v5.0.2.tar.bz2"
+    # "https://nchc.dl.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v$v_mingw.tar.bz2"
   )
 
   for url in "${urls[@]}"; do
@@ -135,7 +136,7 @@ cross_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-headers" >&3
-  "../../src/mingw-w64-v5.0.2/mingw-w64-headers/configure" --build="$build" \
+  "../../src/mingw-w64-v$v_mingw/mingw-w64-headers/configure" --build="$build" \
     --host="$host" --prefix="$prefix/$host" --enable-secure-api || error_exit
   echo "installing mingw-w64-headers" >&3
   make install || error_exit
@@ -154,7 +155,7 @@ cross_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-crt" >&3
-  "../../src/mingw-w64-v5.0.2/mingw-w64-crt/configure" --build="$build" --host="$host" \
+  "../../src/mingw-w64-v$v_mingw/mingw-w64-crt/configure" --build="$build" --host="$host" \
     --prefix="$prefix/$host" --with-sysroot="$prefix/$host"
   echo "building mingw-w64-crt" >&3
   make -j $cpus || error_exit
@@ -193,7 +194,7 @@ native_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-headers" >&3
-  "../../src/mingw-w64-v5.0.2/mingw-w64-headers/configure" --build="$build" \
+  "../../src/mingw-w64-v$v_mingw/mingw-w64-headers/configure" --build="$build" \
     --host="$host" --prefix="$prefix/$host" --enable-secure-api || error_exit
   echo "installing mingw-w64-headers" >&3
   make install || error_exit
@@ -212,7 +213,7 @@ native_toolchain()
 
   clean_build "$bld/mingw-w64"
   echo "configuring mingw-w64-crt" >&3
-  "../../src/mingw-w64-v5.0.2/mingw-w64-crt/configure" --build="$build" --host="$host" \
+  "../../src/mingw-w64-v$v_mingw/mingw-w64-crt/configure" --build="$build" --host="$host" \
     --prefix="$prefix/$host" --with-sysroot="$prefix/$host"
   echo "building mingw-w64-crt" >&3
   make -j $cpus "CFLAGS=-O3" "LDFLAGS=-s" || error_exit
@@ -278,6 +279,7 @@ progs=(
   "g++"
   "tr"
   "tar"
+  "7z"
 )
 missing_progs=""
 for prog in "${progs[@]}"; do
