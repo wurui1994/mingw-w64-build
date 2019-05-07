@@ -1,0 +1,6 @@
+bld-cross
+bld-native
+cross-gcc
+native-gcc
+src
+*.7z

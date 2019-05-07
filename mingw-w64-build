@@ -20,14 +20,14 @@
 #include <isl/space.h>
 #endif /* GCC_CONFIG_H */
 
-v_script="4.0.1"
-v_binutils="2.31.1"
-v_gcc="8.2.0"
+v_script="4.0.2"
+v_binutils="2.32"
+v_gcc="9.1.0"
 v_gmp="6.1.2"
-v_mpfr="4.0.1"
+v_mpfr="4.0.2"
 v_mpc="1.1.0"
-v_isl="0.20"
-v_mingw="5.0.4"
+v_isl="0.21"
+v_mingw="6.0.0"
 
 show_help()
 {
@@ -86,8 +86,8 @@ download_sources()
 {
   cd "$src" || error_exit
 
-  # echo "downloading mingw-w64-v$v_mingw" >&3
-  # git clone --depth 1 "https://github.com/mirror/mingw-w64" "mingw-w64-v$v_mingw" || error_exit
+  echo "downloading mingw-w64-v$v_mingw" >&3
+  git clone --depth 1 "https://github.com/mirror/mingw-w64" "mingw-w64-v$v_mingw" || error_exit
 
   local urls=(
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/binutils/binutils-$v_binutils.tar.bz2"
@@ -96,7 +96,6 @@ download_sources()
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpfr/mpfr-$v_mpfr.tar.xz"
     "https://mirrors.tuna.tsinghua.edu.cn/gnu/mpc/mpc-$v_mpc.tar.gz"
     "http://isl.gforge.inria.fr/isl-$v_isl.tar.xz"
-    "https://nchc.dl.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v$v_mingw.tar.bz2"
   )
 
   for url in "${urls[@]}"; do
@@ -153,7 +152,7 @@ cross_toolchain()
     --enable-static --disable-multilib --prefix="$prefix" \
     --enable-languages=c,c++ --disable-nls || error_exit
   echo "running 'make-gcc' for gcc" >&3
-  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" ||make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s"|| error_exit
+  make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s" || make -j $cpus all-gcc "CFLAGS=-O3" "LDFLAGS=-s"|| error_exit
   echo "running 'install-gcc' for gcc" >&3
   make install-gcc || error_exit
 
@@ -328,9 +327,14 @@ for arch in $@; do
 done
 
 cd $wd
+
 echo "Packge cross-gcc"
 7z a cross-gcc.7z cross-gcc/ || error_exit
+
 echo "Packge native-gcc"
 7z a native-gcc.7z native-gcc/ || error_exit
 
 exit 0
+
+# while [[ 1 ]];do sleep 1s;touch build.log;done;
+# tail -f build.log
